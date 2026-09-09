@@ -25,40 +25,17 @@ const SUBJECT_OPTIONS = [
   { label: 'Engineering Mathematics', url: 'https://practicepaper.in/gate-ec/engineering-mathematics' }
 ];
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL 
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') 
-  : '';
-
-const getProxyUrl = (url) => `${API_BASE}/api/practice-proxy?url=${encodeURIComponent(url)}`;
-
 export default function PYQSection() {
   const [activeMode, setActiveMode] = useState('topic'); // 'topic' or 'subject'
   const [activeUrl, setActiveUrl] = useState(TOPIC_WISE_URL);
   const [selectedSubject, setSelectedSubject] = useState(SUBJECT_OPTIONS[0].url);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const isLocalOrHasBackend = Boolean(import.meta.env.VITE_API_BASE_URL) || 
-    typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const [useProxy, setUseProxy] = useState(isLocalOrHasBackend);
-
-  // Auto-detect if backend proxy is alive. If not (e.g. static Vercel host without backend), fallback to direct embed
-  React.useEffect(() => {
-    const checkProxySupport = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(2000) });
-        if (!res.ok) {
-          setUseProxy(false);
-        } else {
-          setUseProxy(true);
-        }
-      } catch (e) {
-        setUseProxy(false);
-      }
-    };
-    checkProxySupport();
-  }, []);
+  const [iframeKey, setIframeKey] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleSwitchMode = (mode) => {
     setActiveMode(mode);
+    setIsLoading(true);
     if (mode === 'topic') {
       setActiveUrl(TOPIC_WISE_URL);
     } else {
@@ -70,10 +47,12 @@ export default function PYQSection() {
   const handleSubjectChange = (url) => {
     setSelectedSubject(url);
     setActiveUrl(url);
+    setIsLoading(true);
     setIframeKey(prev => prev + 1);
   };
 
   const handleRefresh = () => {
+    setIsLoading(true);
     setIframeKey(prev => prev + 1);
   };
 
@@ -256,14 +235,21 @@ export default function PYQSection() {
           </div>
         </div>
 
-        {/* Embedded Iframe */}
+        {/* Embedded Iframe with Loading Overlay */}
         <div className="flex-1 w-full bg-white relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/90 text-white gap-3 transition-opacity">
+              <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
+              <p className="text-xs text-slate-300 font-medium tracking-wide">Loading Practice Portal...</p>
+            </div>
+          )}
           <iframe
-            key={`${iframeKey}-${useProxy ? 'proxy' : 'direct'}`}
-            src={useProxy ? getProxyUrl(activeUrl) : activeUrl}
+            key={iframeKey}
+            src={activeUrl}
             title="GATE Practice Paper"
             className="w-full h-full border-0"
             allow="fullscreen"
+            onLoad={() => setIsLoading(false)}
           />
         </div>
       </div>
