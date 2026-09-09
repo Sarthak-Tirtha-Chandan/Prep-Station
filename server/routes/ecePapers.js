@@ -36,12 +36,12 @@ ecePapersRouter.get('/:year', checkDb, async (req, res) => {
   }
 });
 
-// UPLOAD or REPLACE paper for a year
+// UPLOAD or REPLACE paper for a year (supports Google Drive link or PDF)
 ecePapersRouter.post('/', checkDb, async (req, res) => {
   try {
-    const { year, title, fileName, fileSize, fileData, notes } = req.body;
-    if (!year || !fileData) {
-      return res.status(400).json({ error: 'Year and PDF fileData are required' });
+    const { year, title, driveLink, fileName, fileSize, fileData, notes } = req.body;
+    if (!year || (!driveLink && !fileData)) {
+      return res.status(400).json({ error: 'Year and Google Drive Link are required' });
     }
 
     const numYear = Number(year);
@@ -52,9 +52,10 @@ ecePapersRouter.post('/', checkDb, async (req, res) => {
       {
         year: numYear,
         title: docTitle,
-        fileName: fileName || `GATE_ECE_${numYear}.pdf`,
+        driveLink: driveLink || '',
+        fileName: fileName || (driveLink ? `GATE_${numYear}_Drive.pdf` : `GATE_ECE_${numYear}.pdf`),
         fileSize: fileSize || 0,
-        fileData,
+        fileData: fileData || '',
         notes: notes || '',
         updatedAt: new Date()
       },
@@ -63,7 +64,7 @@ ecePapersRouter.post('/', checkDb, async (req, res) => {
 
     res.status(201).json(paper);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, FileText, AlertCircle } from 'lucide-react';
+import { X, Link, AlertCircle, CheckCircle2, ExternalLink, HelpCircle } from 'lucide-react';
+import { isValidDriveLink, convertToDrivePreview } from '../utils/driveUtils';
 
 const YEARS = Array.from({ length: 16 }, (_, i) => 2025 - i); // 2025 down to 2010
 
 export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYear }) {
   const [year, setYear] = useState(initialYear || 2024);
   const [title, setTitle] = useState('');
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfBase64, setPdfBase64] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState(0);
+  const [driveLink, setDriveLink] = useState('');
   const [notes, setNotes] = useState('');
   const [uploadError, setUploadError] = useState('');
 
@@ -20,71 +18,32 @@ export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYe
     } else {
       setTitle(`GATE ${year} ECE Question Paper`);
     }
-    setPdfFile(null);
-    setPdfBase64('');
-    setFileName('');
-    setFileSize(0);
+    setDriveLink('');
     setNotes('');
     setUploadError('');
   }, [initialYear, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      setUploadError('Please choose a valid PDF file (.pdf)');
-      return;
-    }
-
-    if (file.size > 25 * 1024 * 1024) {
-      setUploadError('File exceeds 25MB limit. Please upload a smaller PDF.');
-      return;
-    }
-
-    setUploadError('');
-    setPdfFile(file);
-    setFileName(file.name);
-    setFileSize(file.size);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPdfBase64(reader.result);
-    };
-    reader.onerror = () => {
-      setUploadError('Error reading PDF file');
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!pdfBase64) {
-      setUploadError('Please select a PDF file to upload');
+    if (!driveLink.trim()) {
+      setUploadError('Please provide a Google Drive link for this question paper');
       return;
     }
 
     onSave({
       year: Number(year),
       title: title.trim() || `GATE ${year} ECE Question Paper`,
-      fileName: fileName || `GATE_ECE_${year}.pdf`,
-      fileSize,
-      fileData: pdfBase64,
+      driveLink: driveLink.trim(),
+      fileName: `GATE_ECE_${year}.pdf`,
       notes: notes.trim()
     });
 
     onClose();
   };
 
-  const formatBytes = (bytes) => {
-    if (!bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+  const isLinkValid = isValidDriveLink(driveLink);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -93,14 +52,14 @@ export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYe
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Upload className="w-5 h-5" />
+              <Link className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Upload GATE ECE Question Paper PDF
+                Add GATE ECE Paper via Google Drive
               </h2>
               <p className="text-[11px] text-slate-500">
-                Saves PDF in MongoDB Atlas for the selected year
+                Embed full question papers of any file size smoothly
               </p>
             </div>
           </div>
@@ -140,45 +99,54 @@ export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYe
             </select>
           </div>
 
-          {/* PDF Drop Area */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Select Question Paper PDF *
+          {/* Google Drive Link Input */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              Google Drive PDF Link *
             </label>
-            <label className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 cursor-pointer bg-slate-50/60 hover:bg-indigo-50/20 transition group">
+            <div className="relative">
               <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileChange}
-                className="sr-only"
+                type="url"
+                required
+                value={driveLink}
+                onChange={(e) => {
+                  setDriveLink(e.target.value);
+                  setUploadError('');
+                }}
+                placeholder="https://drive.google.com/file/d/1A2B3C.../view?usp=sharing"
+                className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
-              {pdfBase64 ? (
-                <div className="flex items-center gap-3 text-left">
-                  <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 line-clamp-1">{fileName}</p>
-                    <p className="text-xs text-slate-500">{formatBytes(fileSize)} • Ready to upload</p>
-                    <span className="text-[11px] text-indigo-600 font-medium group-hover:underline">
-                      Click to choose another file
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                  <div className="w-10 h-10 mx-auto rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700">
-                      Choose PDF for GATE {year} ECE
-                    </p>
-                    <p className="text-[11px] text-slate-400">PDF up to 25MB supported</p>
-                  </div>
+              {driveLink && (
+                <div className="absolute right-2.5 top-2.5">
+                  {isLinkValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                  )}
                 </div>
               )}
-            </label>
+            </div>
+
+            {/* Helper Info Box */}
+            <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-[11px] text-slate-600 flex items-start gap-2">
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+              <div>
+                <span>In Google Drive, click <strong>Share</strong> &gt; set General Access to <strong>"Anyone with the link can view"</strong>, then copy and paste the link here.</span>
+                {driveLink && isLinkValid && (
+                  <div className="mt-1 flex items-center gap-1.5 text-indigo-700 font-medium">
+                    <span>In-app preview format:</span>
+                    <a
+                      href={convertToDrivePreview(driveLink)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline inline-flex items-center gap-0.5"
+                    >
+                      Test Link <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -201,7 +169,7 @@ export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYe
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Set 1, 65 questions, includes MSQs..."
+              placeholder="e.g. IISc Bangalore, 65 questions, includes MSQs..."
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -217,10 +185,10 @@ export default function ECEPaperUploadModal({ isOpen, onClose, onSave, initialYe
             </button>
             <button
               type="submit"
-              disabled={!pdfBase64}
+              disabled={!driveLink.trim()}
               className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition disabled:opacity-50"
             >
-              Upload & Save to MongoDB
+              Save Paper
             </button>
           </div>
         </form>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { notesApi } from '../services/api';
 import { GATE_SUBJECTS } from '../data/defaultData';
+import { convertToDrivePreview } from '../utils/driveUtils';
 import NoteModal from './NoteModal';
 
 export default function NotesSection({ onNotify }) {
@@ -46,10 +47,10 @@ export default function NotesSection({ onNotify }) {
   const handleSaveNote = async (payload) => {
     try {
       await notesApi.create(payload);
-      onNotify?.('PDF note uploaded and stored successfully!');
+      onNotify?.('PDF note saved successfully!');
       fetchNotes();
     } catch (e) {
-      onNotify?.('Error uploading note');
+      onNotify?.('Error saving note');
     }
   };
 
@@ -70,6 +71,10 @@ export default function NotesSection({ onNotify }) {
 
   const handleDownload = (note, e) => {
     e?.stopPropagation();
+    if (note.driveLink) {
+      window.open(note.driveLink, '_blank', 'noopener,noreferrer');
+      return;
+    }
     if (!note.fileData) return;
     const link = document.createElement('a');
     link.href = note.fileData;
@@ -187,9 +192,9 @@ export default function NotesSection({ onNotify }) {
                       <button
                         onClick={(e) => handleDownload(note, e)}
                         className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                        title="Download PDF"
+                        title={note.driveLink ? "Open in Google Drive" : "Download PDF"}
                       >
-                        <Download className="w-4 h-4" />
+                        {note.driveLink ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                       </button>
                       <button
                         onClick={(e) => handleDeleteNote(id, e)}
@@ -223,7 +228,7 @@ export default function NotesSection({ onNotify }) {
                 </div>
 
                 <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-[11px] text-slate-400">
-                  <span>{formatBytes(note.fileSize)} • PDF</span>
+                  <span>{note.driveLink ? 'Google Drive PDF' : `${formatBytes(note.fileSize)} • PDF`}</span>
                   <span className="flex items-center gap-1 text-indigo-600 font-semibold group-hover:translate-x-0.5 transition-transform">
                     <Eye className="w-3.5 h-3.5" /> Read PDF
                   </span>
@@ -262,7 +267,7 @@ export default function NotesSection({ onNotify }) {
                     {viewingPdfNote.title}
                   </h2>
                   <p className="text-[11px] text-slate-500 truncate">
-                    {viewingPdfNote.subject} • {viewingPdfNote.fileName}
+                    {viewingPdfNote.subject} • {viewingPdfNote.fileName || 'Google Drive Document'}
                   </p>
                 </div>
               </div>
@@ -278,13 +283,25 @@ export default function NotesSection({ onNotify }) {
                   <span>{isPdfFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
                 </button>
 
-                <button
-                  onClick={() => handleDownload(viewingPdfNote)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Download
-                </button>
+                {viewingPdfNote.driveLink ? (
+                  <a
+                    href={viewingPdfNote.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open in Drive
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => handleDownload(viewingPdfNote)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -300,11 +317,12 @@ export default function NotesSection({ onNotify }) {
 
             {/* Embedded PDF Viewer */}
             <div className="flex-1 bg-slate-800 relative">
-              {viewingPdfNote.fileData ? (
+              {viewingPdfNote.driveLink || viewingPdfNote.fileData ? (
                 <iframe
-                  src={viewingPdfNote.fileData}
+                  src={viewingPdfNote.driveLink ? convertToDrivePreview(viewingPdfNote.driveLink) : viewingPdfNote.fileData}
                   title={viewingPdfNote.title}
                   className="w-full h-full border-0"
+                  allow="autoplay"
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-slate-400 text-xs">

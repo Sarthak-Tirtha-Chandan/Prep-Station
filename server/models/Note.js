@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 const noteSchema = new mongoose.Schema({
   title: { type: String, required: true },
   subject: { type: String, required: true }, // e.g. "Networks & Systems", "Electromagnetics", etc.
-  fileName: { type: String, required: true },
+  driveLink: { type: String, default: '' }, // Google Drive share/view link
+  fileName: { type: String, default: 'Google Drive Document' },
   fileSize: { type: Number, default: 0 }, // in bytes
-  fileData: { type: String, required: true }, // Base64 data URI (data:application/pdf;base64,...)
+  fileData: { type: String, default: '' }, // Legacy Base64 or fallback
   topic: { type: String, default: 'General' },
   description: { type: String, default: '' },
   tags: [{ type: String }],

@@ -1,82 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Link, CheckCircle2, AlertCircle, ExternalLink, HelpCircle } from 'lucide-react';
 import { GATE_SUBJECTS } from '../data/defaultData';
+import { isValidDriveLink, convertToDrivePreview } from '../utils/driveUtils';
 
 export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Networks, Signals & Systems');
+  const [driveLink, setDriveLink] = useState('');
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfBase64, setPdfBase64] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState(0);
   const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     if (editingNote) {
       setTitle(editingNote.title || '');
       setSubject(editingNote.subject || 'Networks, Signals & Systems');
+      setDriveLink(editingNote.driveLink || editingNote.fileData || '');
       setTopic(editingNote.topic || '');
       setDescription(editingNote.description || '');
       setTags((editingNote.tags || []).join(', '));
-      setFileName(editingNote.fileName || '');
-      setFileSize(editingNote.fileSize || 0);
-      setPdfBase64(editingNote.fileData || '');
-      setPdfFile(null);
       setUploadError('');
     } else {
       setTitle('');
       setSubject('Networks, Signals & Systems');
+      setDriveLink('');
       setTopic('');
       setDescription('');
       setTags('');
-      setPdfFile(null);
-      setPdfBase64('');
-      setFileName('');
-      setFileSize(0);
       setUploadError('');
     }
   }, [editingNote, isOpen]);
 
   if (!isOpen) return null;
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      setUploadError('Please select a valid PDF file (.pdf)');
-      return;
-    }
-
-    // Limit to 25MB for browser responsiveness
-    if (file.size > 25 * 1024 * 1024) {
-      setUploadError('File exceeds 25MB limit. Please upload a smaller PDF.');
-      return;
-    }
-
-    setUploadError('');
-    setPdfFile(file);
-    setFileName(file.name);
-    setFileSize(file.size);
-
-    if (!title.trim()) {
-      // Auto-set title from file name (without extension)
-      const cleanName = file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
-      setTitle(cleanName);
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPdfBase64(reader.result);
-    };
-    reader.onerror = () => {
-      setUploadError('Error reading PDF file');
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -85,19 +41,18 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
       return;
     }
 
-    if (!pdfBase64) {
-      setUploadError('Please select a PDF file to upload');
+    if (!driveLink.trim()) {
+      setUploadError('Please provide a Google Drive link');
       return;
     }
 
     const payload = {
       title: title.trim(),
       subject,
+      driveLink: driveLink.trim(),
+      fileName: `${title.trim()}.pdf`,
       topic: topic.trim() || 'General',
       description: description.trim(),
-      fileName: fileName || 'document.pdf',
-      fileSize,
-      fileData: pdfBase64,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean)
     };
 
@@ -105,28 +60,22 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
     onClose();
   };
 
-  const formatBytes = (bytes) => {
-    if (!bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+  const isLinkValid = isValidDriveLink(driveLink);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Upload className="w-4 h-4" />
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Link className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-800">
-                {editingNote ? 'Edit PDF Note' : 'Upload PDF Study Material'}
+              <h2 className="text-base font-bold text-slate-800">
+                {editingNote ? 'Edit Study Note' : 'Add Note via Google Drive Link'}
               </h2>
-              <p className="text-[11px] text-slate-400">Stores PDF securely in MongoDB</p>
+              <p className="text-[11px] text-slate-400">Embed any size PDF directly from your Google Drive</p>
             </div>
           </div>
           <button
@@ -146,43 +95,54 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
             </div>
           )}
 
-          {/* PDF Upload Drop Area */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Select PDF File *
+          {/* Google Drive Link Input */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">
+              Google Drive PDF Link *
             </label>
-            <label className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 cursor-pointer bg-slate-50/60 hover:bg-indigo-50/20 transition group">
+            <div className="relative">
               <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileChange}
-                className="sr-only"
+                type="url"
+                required
+                value={driveLink}
+                onChange={(e) => {
+                  setDriveLink(e.target.value);
+                  setUploadError('');
+                }}
+                placeholder="https://drive.google.com/file/d/1A2B3C.../view?usp=sharing"
+                className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
-              {pdfBase64 ? (
-                <div className="flex items-center gap-3 text-left">
-                  <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 line-clamp-1">{fileName}</p>
-                    <p className="text-xs text-slate-500">{formatBytes(fileSize)} • Ready to save</p>
-                    <span className="text-[11px] text-indigo-600 font-medium group-hover:underline">Click to change file</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                  <div className="w-10 h-10 mx-auto rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700">
-                      Click to choose a PDF or drag and drop
-                    </p>
-                    <p className="text-[11px] text-slate-400">PDF up to 25MB supported</p>
-                  </div>
+              {driveLink && (
+                <div className="absolute right-2.5 top-2.5">
+                  {isLinkValid ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                  )}
                 </div>
               )}
-            </label>
+            </div>
+
+            {/* Helper Info Box */}
+            <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-[11px] text-slate-600 flex items-start gap-2">
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+              <div>
+                <span>In Google Drive, click <strong>Share</strong> &gt; set General Access to <strong>"Anyone with the link can view"</strong>, then copy and paste the link here.</span>
+                {driveLink && isLinkValid && (
+                  <div className="mt-1 flex items-center gap-1.5 text-indigo-700 font-medium">
+                    <span>In-app preview format:</span>
+                    <a
+                      href={convertToDrivePreview(driveLink)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline inline-flex items-center gap-0.5"
+                    >
+                      Test Link <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -196,7 +156,7 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Analog Circuits Short Notes"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -207,7 +167,7 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
               <select
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {GATE_SUBJECTS.filter(s => s !== 'All').map(sub => (
                   <option key={sub} value={sub}>{sub}</option>
@@ -225,8 +185,8 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g. Feedback Amplifiers"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g. Feedback Amplifiers, Op-Amp"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -238,21 +198,21 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g. Formulas, OpAmp, High Yield"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g. Formulas, High Yield, PYQ Reference"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Description / Summary (optional)
+              Description / Remarks (optional)
             </label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Key concepts or chapters covered in this PDF..."
+              placeholder="Key concepts or chapters covered in this document..."
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -268,10 +228,9 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote }) {
             </button>
             <button
               type="submit"
-              disabled={!pdfBase64}
-              className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition disabled:opacity-50"
+              className="px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition"
             >
-              {editingNote ? 'Update Note' : 'Upload & Save to MongoDB'}
+              {editingNote ? 'Update Note' : 'Save Note to Database'}
             </button>
           </div>
         </form>

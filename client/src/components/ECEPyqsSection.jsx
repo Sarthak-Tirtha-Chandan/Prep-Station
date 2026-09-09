@@ -15,6 +15,7 @@ import {
   Plus
 } from 'lucide-react';
 import { ecePapersApi } from '../services/api';
+import { convertToDrivePreview } from '../utils/driveUtils';
 import ECEPaperUploadModal from './ECEPaperUploadModal';
 
 const ALL_YEARS = Array.from({ length: 16 }, (_, i) => 2025 - i); // 2025 down to 2010
@@ -62,7 +63,7 @@ export default function ECEPyqsSection({ onNotify }) {
   const handleSavePaper = async (payload) => {
     try {
       const saved = await ecePapersApi.upload(payload);
-      onNotify?.(`GATE ECE ${saved.year} question paper uploaded to MongoDB!`);
+      onNotify?.(`GATE ECE ${saved.year} question paper saved successfully!`);
       await fetchPapersList();
       setSelectedYear(saved.year);
       await fetchCurrentYearPaper(saved.year);
@@ -84,6 +85,10 @@ export default function ECEPyqsSection({ onNotify }) {
   };
 
   const handleDownload = () => {
+    if (currentPaper?.driveLink) {
+      window.open(currentPaper.driveLink, '_blank', 'noopener,noreferrer');
+      return;
+    }
     if (!currentPaper?.fileData) return;
     const link = document.createElement('a');
     link.href = currentPaper.fileData;
@@ -137,8 +142,8 @@ export default function ECEPyqsSection({ onNotify }) {
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
           >
-            <Upload className="w-4 h-4" />
-            Upload Paper (PDF)
+            <Plus className="w-4 h-4" />
+            Add Paper (Drive Link)
           </button>
         </div>
       </div>
@@ -172,7 +177,7 @@ export default function ECEPyqsSection({ onNotify }) {
                 <span>{year}</span>
                 {isUploaded && (
                   <span
-                    title="PDF uploaded for this year"
+                    title="Paper uploaded for this year"
                     className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-300' : 'bg-emerald-500'}`}
                   />
                 )}
@@ -188,7 +193,7 @@ export default function ECEPyqsSection({ onNotify }) {
           <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
           <p className="text-xs text-slate-500">Loading GATE {selectedYear} paper...</p>
         </div>
-      ) : currentPaper && currentPaper.fileData ? (
+      ) : currentPaper && (currentPaper.driveLink || currentPaper.fileData) ? (
         <div className="space-y-3">
           {/* Metadata Banner */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
@@ -204,7 +209,7 @@ export default function ECEPyqsSection({ onNotify }) {
                   </span>
                 </div>
                 <p className="text-slate-500 text-[11px] mt-0.5">
-                  {currentPaper.fileName} • {formatBytes(currentPaper.fileSize)}
+                  {currentPaper.driveLink ? 'Google Drive PDF' : `${currentPaper.fileName} • ${formatBytes(currentPaper.fileSize)}`}
                   {currentPaper.notes && ` • ${currentPaper.notes}`}
                 </p>
               </div>
@@ -218,15 +223,26 @@ export default function ECEPyqsSection({ onNotify }) {
                 }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
               >
-                <Upload className="w-3.5 h-3.5" /> Replace PDF
+                <Upload className="w-3.5 h-3.5" /> Edit Paper
               </button>
 
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
-              >
-                <Download className="w-3.5 h-3.5" /> Download
-              </button>
+              {currentPaper.driveLink ? (
+                <a
+                  href={currentPaper.driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Open in Drive
+                </a>
+              ) : (
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
+                </button>
+              )}
 
               <button
                 onClick={() => handleDeletePaper(selectedYear)}
@@ -263,20 +279,32 @@ export default function ECEPyqsSection({ onNotify }) {
                   <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
                 </button>
 
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-1 px-3 py-1 bg-slate-700/70 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition"
-                >
-                  <Download className="w-3.5 h-3.5" /> Download
-                </button>
+                {currentPaper.driveLink ? (
+                  <a
+                    href={currentPaper.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1 bg-slate-700/70 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Open in Drive
+                  </a>
+                ) : (
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-1 px-3 py-1 bg-slate-700/70 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="flex-1 w-full bg-slate-100 relative">
               <iframe
-                src={currentPaper.fileData}
+                src={currentPaper.driveLink ? convertToDrivePreview(currentPaper.driveLink) : currentPaper.fileData}
                 title={`GATE ECE ${selectedYear} Question Paper`}
                 className="w-full h-full border-0"
+                allow="autoplay"
               />
             </div>
           </div>
@@ -290,10 +318,10 @@ export default function ECEPyqsSection({ onNotify }) {
 
           <div className="max-w-md mx-auto space-y-1">
             <h3 className="text-base font-bold text-slate-900">
-              No PDF uploaded for GATE ECE {selectedYear} yet
+              No paper added for GATE ECE {selectedYear} yet
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Upload the official question paper PDF for GATE {selectedYear} Electronics & Communication Engineering. It will be stored in your MongoDB Atlas database.
+              Provide a Google Drive sharing link for the GATE {selectedYear} Electronics & Communication Engineering question paper to read and solve it directly in-app.
             </p>
           </div>
 
@@ -305,8 +333,8 @@ export default function ECEPyqsSection({ onNotify }) {
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-200 transition"
             >
-              <Upload className="w-4 h-4" />
-              Upload GATE ECE {selectedYear} Paper PDF
+              <Plus className="w-4 h-4" />
+              Add GATE ECE {selectedYear} Paper Link
             </button>
           </div>
         </div>
