@@ -1,6 +1,13 @@
 import { defaultNotes, defaultPYQs, defaultTodos, defaultReminders } from '../data/defaultData';
 
-const BASE_URL = '/api';
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') + '/api';
+  }
+  return '/api';
+};
+
+const BASE_URL = getApiBase();
 
 // Helper to get local data or fallback to defaults
 const getLocal = (key, defaultVal) => {
