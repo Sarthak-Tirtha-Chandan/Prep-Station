@@ -36,8 +36,9 @@ export default function PYQSection() {
   const [activeUrl, setActiveUrl] = useState(TOPIC_WISE_URL);
   const [selectedSubject, setSelectedSubject] = useState(SUBJECT_OPTIONS[0].url);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [iframeKey, setIframeKey] = useState(1);
-  const [useProxy, setUseProxy] = useState(true);
+  const isLocalOrHasBackend = Boolean(import.meta.env.VITE_API_BASE_URL) || 
+    typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const [useProxy, setUseProxy] = useState(isLocalOrHasBackend);
 
   // Auto-detect if backend proxy is alive. If not (e.g. static Vercel host without backend), fallback to direct embed
   React.useEffect(() => {
