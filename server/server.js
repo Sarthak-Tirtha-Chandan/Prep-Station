@@ -121,6 +121,7 @@ if (process.env.MONGODB_URI) {
   connectToDatabase(process.env.MONGODB_URI);
 }
 
-app.listen(PORT, () => {
-  console.log(`[Server] GATE PrepStation backend running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Server] GATE PrepStation backend running on http://0.0.0.0:${PORT}`);
 });
+
