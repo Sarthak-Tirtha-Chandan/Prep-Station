@@ -7,6 +7,7 @@ import FocusTimer from './components/FocusTimer';
 import TodoSection from './components/TodoSection';
 import ReminderSection from './components/ReminderSection';
 import ReminderAlertModal from './components/ReminderAlertModal';
+import FixedTodoIcon from './components/FixedTodoIcon';
 import { dbService, remindersApi } from './services/api';
 import { playChime } from './services/audio';
 import confetti from 'canvas-confetti';
@@ -191,6 +192,9 @@ export default function App() {
           </button>
         </div>
       )}
+
+      {/* Fixed Left-Space Quick Access To-Do Icon (Hourly Glow) */}
+      <FixedTodoIcon activeTab={activeTab} setActiveTab={setActiveTab} onNotify={showNotification} />
 
       {/* Header with live ticking timer pill */}
       <Header
