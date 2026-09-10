@@ -170,9 +170,9 @@ export default function FixedTodoIcon({ activeTab, setActiveTab, onNotify }) {
     <>
       {/* Fixed Left Floating Icon */}
       <div className="fixed left-3 sm:left-5 top-1/2 -translate-y-1/2 z-40 group">
-        {/* Outer Ping Animation when Glowing */}
+        {/* Outer Glow Animation when Glowing */}
         {isGlowing && (
-          <span className="absolute -inset-1.5 rounded-2xl bg-indigo-500/50 animate-ping pointer-events-none" />
+          <span className="absolute -inset-1 rounded-2xl bg-indigo-500/20 animate-pulse pointer-events-none" />
         )}
 
         {/* Main Floating Icon Button */}
@@ -181,29 +181,29 @@ export default function FixedTodoIcon({ activeTab, setActiveTab, onNotify }) {
           aria-label="Quick Access To-Do List"
           className={`relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl transition-all duration-300 transform active:scale-95 ${
             isGlowing
-              ? 'bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white animate-todo-glow shadow-xl ring-4 ring-indigo-400/80 ring-offset-2'
+              ? 'bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white animate-todo-glow shadow-md ring-2 ring-indigo-500/40'
               : isOpen
-              ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 ring-2 ring-indigo-500 ring-offset-2 scale-105'
-              : 'bg-white text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/70 border border-slate-200/90 shadow-lg hover:shadow-xl hover:scale-105'
+              ? 'bg-indigo-600 text-white shadow-md ring-1.5 ring-indigo-500/50 scale-105'
+              : 'bg-white text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/70 border border-slate-200/90 shadow-sm hover:shadow-md hover:scale-105'
           }`}
           title="Quick To-Do Popup"
         >
           {isGlowing ? (
-            <Sparkles className="w-6 h-6 animate-spin text-amber-300" style={{ animationDuration: '4s' }} />
+            <Sparkles className="w-5 h-5 text-amber-200" />
           ) : (
-            <ListTodo className="w-6 h-6" />
+            <ListTodo className="w-5 h-5" />
           )}
 
           {/* Pending Task Badge */}
           {pendingCount > 0 && !isGlowing && (
-            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md border-2 border-white">
+            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm border border-slate-900/10">
               {pendingCount > 99 ? '99+' : pendingCount}
             </span>
           )}
 
           {/* Glowing 1-Hour Alert Indicator Dot */}
           {isGlowing && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 border-2 border-white rounded-full animate-bounce shadow-md flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400/90 rounded-full animate-pulse shadow-sm flex items-center justify-center">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-900" />
             </span>
           )}

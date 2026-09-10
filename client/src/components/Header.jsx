@@ -8,6 +8,7 @@ import {
   GraduationCap,
   BookOpen
 } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Header({ 
   activeTab, 
@@ -78,7 +79,7 @@ export default function Header({
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* Quick Timer Pill if timer is running and not on timer tab */}
             {timerRunning && activeTab !== 'timer' && (
               <button
@@ -89,6 +90,9 @@ export default function Header({
                 {formatTimer(timerSeconds)}
               </button>
             )}
+
+            {/* Dark / Light Theme Toggle */}
+            <ThemeToggle />
           </div>
         </div>
 
