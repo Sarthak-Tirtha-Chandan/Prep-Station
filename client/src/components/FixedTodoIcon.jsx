@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { todosApi } from '../services/api';
+import { formatTodoDueDate } from '../utils/dateUtils';
 
 const GLOW_INTERVAL_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 const STORAGE_KEY = 'prep_station_todo_last_glow';
@@ -377,6 +378,16 @@ export default function FixedTodoIcon({ activeTab, setActiveTab, onNotify }) {
                               }`}
                             >
                               {todo.priority}
+                            </span>
+                          )}
+                          {formatTodoDueDate(todo) && (
+                            <span className={`text-[9px] font-medium flex items-center gap-0.5 ${
+                              formatTodoDueDate(todo) === 'Yesterday'
+                                ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                                : 'text-slate-500'
+                            }`}>
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatTodoDueDate(todo)}
                             </span>
                           )}
                         </div>

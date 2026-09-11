@@ -12,6 +12,7 @@ import {
 import confetti from 'canvas-confetti';
 import { todosApi } from '../services/api';
 import { GATE_SUBJECTS } from '../data/defaultData';
+import { formatTodoDueDate } from '../utils/dateUtils';
 import TodoModal from './TodoModal';
 
 const PRIORITY_COLORS = {
@@ -226,10 +227,14 @@ export default function TodoSection({ onNotify }) {
                         {todo.priority}
                       </span>
 
-                      {todo.dueDate && (
-                        <span className="flex items-center gap-1 text-slate-500">
+                      {formatTodoDueDate(todo) && (
+                        <span className={`flex items-center gap-1 ${
+                          formatTodoDueDate(todo) === 'Yesterday'
+                            ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                            : 'text-slate-500'
+                        }`}>
                           <Clock className="w-3 h-3 text-slate-400" />
-                          {todo.dueDate}
+                          {formatTodoDueDate(todo)}
                         </span>
                       )}
 

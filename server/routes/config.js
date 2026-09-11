@@ -13,11 +13,18 @@ let currentMongoUri = process.env.MONGODB_URI || '';
 let isConnected = false;
 let lastError = null;
 
+let retryTimeout = null;
+
 export const connectToDatabase = async (uri) => {
   if (!uri) {
     isConnected = false;
     currentMongoUri = '';
     return { success: false, message: 'No MongoDB URI provided' };
+  }
+
+  if (retryTimeout) {
+    clearTimeout(retryTimeout);
+    retryTimeout = null;
   }
 
   try {
@@ -34,22 +41,23 @@ export const connectToDatabase = async (uri) => {
     lastError = null;
     console.log('[MongoDB] Connected successfully to:', uri.replace(/:([^:@]+)@/, ':****@'));
 
-    // Check if empty, auto-seed if requested or empty
-    // Check if empty, auto-seed if needed (no dummy notes)
-    const pyqCount = await PYQ.countDocuments();
-    if (pyqCount === 0) {
-      console.log('[MongoDB] Initializing database with seed practice questions...');
-      await PYQ.insertMany(seedPYQs);
-      await Todo.insertMany(seedTodos);
-      await Reminder.insertMany(seedReminders);
-      console.log('[MongoDB] Seeding completed.');
-    }
-
     return { success: true, message: 'Connected to MongoDB successfully' };
   } catch (err) {
     console.error('[MongoDB] Connection failed:', err.message);
     isConnected = false;
     lastError = err.message;
+
+    // Schedule auto-retry if connection failed
+    if (!retryTimeout && uri) {
+      retryTimeout = setTimeout(() => {
+        retryTimeout = null;
+        if (mongoose.connection.readyState !== 1) {
+          console.log('[MongoDB] Retrying connection to Atlas...');
+          connectToDatabase(uri);
+        }
+      }, 5000);
+    }
+
     return { success: false, message: err.message };
   }
 };

@@ -81,6 +81,8 @@ export default function App() {
 
   useEffect(() => {
     checkDbStatus();
+    const interval = setInterval(checkDbStatus, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Real-Time Reminder Alert Checker (checks every 10 seconds)
